@@ -1,19 +1,57 @@
 const ListCountGame = class{
-    constructor(child, parent, total, footer){
+    constructor(child, parent, total, footer, gameNumber){
+      // option 1 (extra)
+      this.addJQueryRefresh();
       this.$child = $(child);
+      // console.log(this.$child.refresh());
+      // console.log(this.$child.selector); // use this instead of this.child
+
+      // option 2
+      this.child = child;
       this.$parent = $(parent);
       this.$total = $(total);
       this.$footer = $(footer);
+      this.$gameNumber = $(gameNumber);
+      this.gameTotal = this.random(15,35);
+      this.$gameNumber.text(this.gameTotal);
       this.initEvents();
-      this.randomSequence();
+      this.generateGame();
       this.calcTotal();
+
+    }
+    
+    // option 1 (extra method)
+    addJQueryRefresh(){
+      $ = (function (originalJQuery) 
+      {
+          return (function () 
+          {
+              var newJQuery = originalJQuery.apply(this, arguments);
+              newJQuery.selector = arguments.length > 0 ? arguments[0] : null;
+              return newJQuery;
+          });
+      })($);
+      
+      $.fn = $.prototype = jQuery.fn;
+      
+      $.fn.refresh = function () 
+      {
+          if (this.selector != null && (typeof this.selector === 'string' || this.selector instanceof String))
+          {
+              var elems = $(this.selector);
+              this.splice(0, this.length);
+              this.push.apply(this, elems);
+              console.log(this, elems);
+          }
+          return this;
+      };
     }
   
     initEvents(){
-      this.$child.on('click',(e)=>{
+      this.$parent.on('click',this.child,(e)=>{
         this.appendItem(e);
         this.calcTotal();
-      })
+      });
     }
   
     appendItem(e){
@@ -27,11 +65,12 @@ const ListCountGame = class{
       } else {
         this.$parent.first().append($clickedItem);
       }
+      
     }
   
     calcTotal(){
       this.$parent.each((index, parent)=>{
-        const $children = $(parent).find(this.$child);
+        const $children = $(parent).find(this.child);
         let total = 0;
         // sum of list items
         $children.text((index, text)=>{
@@ -41,10 +80,37 @@ const ListCountGame = class{
 
         $(parent).next().find(this.$total).text(total);
       })
+      this.checkWon();
+    }
+
+    generateGame(){
+      let leftSequence = this.randomSequence();
+      let rightSequence = this.randomSequence();
+      const gameSequence = leftSequence.concat(rightSequence);
+      this.shuffleArray(gameSequence);
+      leftSequence = gameSequence.slice(0,gameSequence.length/2);
+      rightSequence = gameSequence.slice(gameSequence.length/2,gameSequence.length);
+      console.log(leftSequence, rightSequence);
+      this.appendNumbers(leftSequence,this.$parent.first());
+      this.appendNumbers(rightSequence,this.$parent.last());
+      this.calcTotal();
+    }
+
+    appendNumbers(sequence,$parent){
+      console.log(sequence);
+      sequence.forEach(number => {
+        $(`<li></li>`).text(number).appendTo($parent)
+      });
+    }
+
+    shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+      }
     }
 
     randomSequence(){
-        this.gameTotal = 20;
         const stepAmount = this.random(3,4); //4
         let prevAmount = 0;
         let sequence = [];
@@ -56,8 +122,7 @@ const ListCountGame = class{
         }
         const restValue = this.gameTotal - prevAmount;
         sequence.push(restValue);
-        console.log('totalSequence:', sequence.reduce((a,b) => a + b, 0));
-        console.log('sequence:', sequence);
+        return sequence;
     }
 
 
@@ -65,16 +130,19 @@ const ListCountGame = class{
       return  Math.floor(Math.random()*(max+1-min))+min;
     }
 
-    checkWon(total){
-      if (total == 0) {
+    checkWon(){
+      const leftSideIsCorrect = (parseInt(this.$total.first().text()) == this.gameTotal);
+      const rightSideIsCorrect = (parseInt(this.$total.last().text()) == this.gameTotal);
+      console.log(leftSideIsCorrect,rightSideIsCorrect);
+      if (leftSideIsCorrect && rightSideIsCorrect) {
         this.$footer.addClass("locked");
-        this.$child.off('click');
+        this.$parent.off('click');
       }
     }
 
   }
   
-  new ListCountGame('li','.js-list', ".js-total", ".js-footer");
+  new ListCountGame('li','.js-list', ".js-total", ".js-footer", ".js-gameNumber");
 
 // Simplified version of 5 steps:
 /* #1  Recources? start?   ####
